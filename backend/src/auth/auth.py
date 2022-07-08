@@ -178,6 +178,7 @@ def requires_auth(permission=''):
             except:
                 abort(401)
             check_permissions(permission, payload)
+            print(f(payload, *args, **kwargs))
             return f(payload, *args, **kwargs)
 
         return wrapper

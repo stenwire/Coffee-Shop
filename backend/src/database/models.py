@@ -16,7 +16,9 @@ setup_db(app)
 
 
 def setup_db(app):
-    app.config["SQLALCHEMY_DATABASE_URI"] = database_path
+    # -- for postgresql
+    # app.config["SQLALCHEMY_DATABASE_URI"] = 'postgresql://user:password@localhost:5432/db_name'
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_path # -- for sqlLite
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.app = app
     db.init_app(app)
