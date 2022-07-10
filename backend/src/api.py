@@ -35,9 +35,8 @@ def get_drinks():
     selection = Drink.query.all()
     return jsonify({
         'success': True,
-        'status_code': 200,
         "drinks": [drinks.short() for drinks in selection]
-    })
+    }), 200
 
 
 '''
@@ -55,9 +54,8 @@ def get_drinks_detail(jwt):
     # drinks = selection.long()
     return jsonify({
         'success': True,
-        'status_code': 200,
         "drinks": [drinks.long() for drinks in selection]
-    })
+    }), 200
 
 
 '''
@@ -74,32 +72,31 @@ def get_drinks_detail(jwt):
 def create_drinks(jwt):
     body = request.get_json()
 
-    if request.method == 'POST':
+    req_recipe = body.get('recipe')
+    req_title = body.get('title')
 
-        req_title = body.get('title')
-        req_recipe = body.get('recipe')
+    if(req_title, req_recipe) == None:
+        abort(422)
 
-        if isinstance(req_recipe, dict):
+    if isinstance(req_recipe, dict):
             req_recipe = [req_recipe]
 
-        try:
-            new_drink = Drink(
-                title=req_title,
-                recipe=json.dumps(req_recipe),
-            )
+    try:
+        new_drink = Drink(
+            title=req_title,
+            recipe=json.dumps(req_recipe)
+        )
 
-            new_drink.insert()
-            drinks =  db.session.query(Drink).filter(Drink.id == new_drink.id).one_or_none()
+        new_drink.insert()
+        drink =  db.session.query(Drink).filter(Drink.id == new_drink.id).one_or_none()
 
-            return jsonify({
-                'success': True,
-                'status_code': 200,
-                "drinks": [drinks.long()]
-            })
-        except Exception as e:
-            print(e)
-            abort(422)
-    else:
+        return jsonify({
+            'success': True,
+            "drinks": [drink.long()]
+        }), 200
+    
+    except Exception as e:
+        print(e)
         abort(400)
 
 
@@ -114,33 +111,34 @@ def create_drinks(jwt):
     returns status code 200 and json {"success": True, "drinks": drink} where drink an array containing only the updated drink
         or appropriate status code indicating reason for failure
 '''
-@app.route('/drinks/<id>', methods=['PATCH'])
+@app.route('/drinks/<int:id>', methods=['PATCH'])
 @requires_auth('patch:drinks')
 def edit_drink(jwt, id):
     body = request.get_json()
-    if request.method == 'PATCH':
-        try:
-            selection = db.session.query(Drink).filter(Drink.id == id).one_or_none()
-            
-            new_title = body.get('title')
-            new_recipe = body.get('recipe')
 
-            selection.title = new_title
-            selection.recipe = json.dumps(new_recipe)
+    selection = db.session.query(Drink).filter(Drink.id == id).one_or_none()
 
-            selection.update()
-            drinks =  db.session.query(Drink).filter(Drink.id == id).one_or_none()
+    if selection is None:
+        abort(404)
+    
+    new_title = body.get('title')
+    new_recipe = body.get('recipe')
 
-            return jsonify({
-                'success': True,
-                'status_code': 200,
-                "drinks": [drinks.long()]
-            })
+    if(new_title, new_recipe) == None:
+        abort(422)
 
-        except:
-            abort(404)
-    else:
-        abort(400)
+    try:
+        selection.title = new_title
+        # selection.recipe = json.dumps(new_recipe)
+        selection.update()
+
+        return jsonify({
+            'success': True,
+            "drinks": [selection.long()]
+        }), 200
+
+    except:
+        abort(422)
 
 
 '''
@@ -153,23 +151,23 @@ def edit_drink(jwt, id):
     returns status code 200 and json {"success": True, "delete": id} where id is the id of the deleted record
         or appropriate status code indicating reason for failure
 '''
-@app.route('/drinks/<id>', methods=['DELETE'])
+@app.route('/drinks/<int:id>', methods=['DELETE'])
 @requires_auth('delete:drinks')
 def delete_drink(jwt, id):
-    if request.method == 'DELETE':
-        try:
-            drink = db.session.query(Drink).filter(Drink.id == id).one_or_none()
-            drink.delete()
+    drink = db.session.query(Drink).filter(Drink.id == id).one_or_none()
 
-            return jsonify({
-                'success': True,
-                'id': id
-            })
+    if drink is None:
+        abort(404)
 
-        except:
-            abort(404)
+    try:
+        drink.delete()
+    except:
+        abort(404)
     else:
-        abort(400)
+        return jsonify({
+            'success': True,
+            'delete': id
+        }),200
 
 
 
@@ -222,3 +220,29 @@ def authError(error):
         "error": error.status_code,
         "message":error.error['description'],
     }), error.status_code
+
+
+@app.errorhandler(400)
+def bad_request(error):
+    return jsonify({
+        "success": False,
+        "error": 400,
+        "message": "bad request"
+    }), 400
+
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    return jsonify({
+        "success": False,
+        "error": 500,
+        "message": "internal server error"
+    }), 500
+
+@app.errorhandler(403)
+def permission_error(error):
+    return jsonify({
+        "success": False,
+        "error": 403,
+        "message": "You do not have proper authorization"
+    }), 403
