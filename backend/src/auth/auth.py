@@ -5,7 +5,7 @@ from jose import jwt
 from urllib.request import urlopen
 
 
-AUTH0_DOMAIN = 'dev-z4iv3gkc.us.auth0.com'
+AUTH0_DOMAIN = 'dev-ix788c42.us.auth0.com'
 ALGORITHMS = ['RS256']
 API_AUDIENCE = 'coffee'
 
@@ -77,11 +77,11 @@ def get_token_auth_header():
 def check_permissions(permission, payload):
     # raise Exception('Not Implemented')
     if 'permissions' not in payload:
-        # abort(400)
-        raise AuthError({
-            'code': 'invalid_claims',
-            'description': 'Permissions not included in JWT.'
-        }, 400)
+        abort(400)
+        # raise AuthError({
+        #     'code': 'invalid_claims',
+        #     'description': 'Permissions not included in JWT.'
+        # }, 400)
 
     if permission not in payload['permissions']:
         # abort(403)
@@ -176,7 +176,7 @@ def requires_auth(permission=''):
             try:
                 payload = verify_decode_jwt(token)
             except:
-                abort(401)
+                abort(403)
             check_permissions(permission, payload)
             print(f(payload, *args, **kwargs))
             return f(payload, *args, **kwargs)
